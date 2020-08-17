@@ -8,6 +8,9 @@ const char* password = "soyfeliz";
 const int timeToCollect = 10000;
 const int period = 10000;
 unsigned long timeNow = 0;
+String gnomos[2] = { "dataCollect-gnomo1", "dataCollect-gnomo2" };
+String humidities[] = {};
+String crops[2] = {"albahaca", "besitos"};
 
 uint8_t buf[RH_NRF24_MAX_MESSAGE_LEN];
 
@@ -23,7 +26,8 @@ void setup()
 void loop()
 {
   CollectData();
-  SentDataToServer();
+  
+  //SentDataToServer();
 }
 
 void InitializeRadio()
@@ -53,15 +57,13 @@ void CollectData()
   if( millis() >= timeNow + period )
   {
       timeNow += period;
-      
+
       RequestData();
   }
 }
 
-void SentDataToServer()
+void SentDataToServer( String message )
 {
-  if( MessageWasReceived() )
-  {
       if (WiFi.status() == WL_CONNECTED) 
       {
         WiFiClient client;
@@ -72,9 +74,7 @@ void SentDataToServer()
     
           Serial.print("[HTTP] POST...\n");
           // start connection and send HTTP header
-          String message = "node_genesis,cultivo=matera_tapitas humidity=";
-          String humidity = String( (char*)buf );
-          message.concat( humidity );
+          
           Serial.println(message);
           int httpCode = http.POST( message );
     
@@ -97,12 +97,11 @@ void SentDataToServer()
           Serial.printf("[HTTP} Unable to connect\n");
         }
       }
-  }
 }
 
 bool MessageWasReceived()
 {
-  if (nrf24.available())
+  if ( nrf24.waitAvailableTimeout(1000) )
   {
     uint8_t len = sizeof(buf);
     if(nrf24.recv(buf, &len))
@@ -122,15 +121,32 @@ bool MessageWasReceived()
 }
 
 void RequestData()
-{
-  String timestring = String(3059);
-  
-  uint8_t dataArray[timestring.length()+1];
-  timestring.getBytes(dataArray,timestring.length()+1);
-  
-  nrf24.send(dataArray,sizeof(dataArray));
-  nrf24.waitPacketSent();
-  
-  Serial.print("Sent: ");
-  Serial.println(timestring);
+{  
+  for(int gnomo = 0; gnomo < 2; gnomo++ )
+  {    
+    uint8_t dataArray[gnomos[gnomo].length() + 1];
+    gnomos[gnomo].getBytes(dataArray, gnomos[gnomo].length()+1);
+    
+    nrf24.send(dataArray,sizeof(dataArray));
+    nrf24.waitPacketSent();
+    
+    Serial.print("Sent: ");
+    Serial.println(gnomos[gnomo]);
+
+    if( MessageWasReceived() )
+    {
+        Serial.print("#gnomo > ");
+        Serial.println(gnomo+1);
+        String humidity = String( (char*)buf );
+        String message = "gnomo_";
+        message.concat(gnomo+1);
+        message.concat(",cultivo=");
+        message.concat(crops[gnomo]);
+        message.concat(" humidity=");
+        message.concat(humidity);
+
+        Serial.println(message);
+        SentDataToServer(message);
+    }    
+  }
 }
