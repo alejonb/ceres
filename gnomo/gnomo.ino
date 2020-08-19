@@ -1,3 +1,4 @@
+#include "gnomoX.h"
 #include <RH_NRF24.h>
 
 RH_NRF24 nrf24;
