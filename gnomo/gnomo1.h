@@ -1,3 +1,3 @@
-#define     GNOMO_ID        2
-#define     HUMIDITY_LOW    380
+#define     GNOMO_ID        1
+#define     HUMIDITY_LOW    500
 #define     HUMIDITY_HIGH   1023
