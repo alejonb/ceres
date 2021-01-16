@@ -1,3 +1,5 @@
+#include "gnomoX.h"
+#include <RH_NRF24.h>
 
 #include <RF24Network.h>
 #include <RF24.h>
