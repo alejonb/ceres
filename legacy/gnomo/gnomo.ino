@@ -4,9 +4,9 @@ RH_NRF24 nrf24;
 
 const int humidityInPin = A0;
 uint8_t buf[RH_NRF24_MAX_MESSAGE_LEN];
-const String dataRequested = "dataCollect-gnomo2";
+const String dataRequested = "dataCollect-gnomo1";
 const String emptyMessage = "";
-
+ 
 void setup() 
 {
   Serial.begin(9600);
@@ -34,7 +34,7 @@ void InitializeRadio()
 int GetHumidity()
 {
   int sensorValue = analogRead(humidityInPin);
-  int outputValue = map(sensorValue, 380, 1023, 100, 0);
+  int outputValue = map(sensorValue, 500, 1023, 100, 0);
 
   Serial.println("Sensor Value: ");
   Serial.print(sensorValue);

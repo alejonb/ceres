@@ -1,79 +1,114 @@
-#include <RH_NRF24.h>
 
-RH_NRF24 nrf24;
+#include <RF24Network.h>
+#include <RF24.h>
+#include <SPI.h>
+
+#define GNOMO_ID "gnomo1"
+#define HIGH_LIMIT 1023
+#define LOW_LIMIT 500
 
 const int humidityInPin = A0;
-uint8_t buf[RH_NRF24_MAX_MESSAGE_LEN];
-const String dataRequested = "dataCollect-gnomo1";
-const String emptyMessage = "";
- 
+const String dataRequested = "DATA_COLLECT";
+const char emptyMessage = '0';
+
+RF24 radio(8,10);
+
+RF24Network network(radio);
+const uint16_t this_node = 02;
+const uint16_t baseId = 00;
+const uint16_t gnomos[2] = { 00, 01 };
+
+struct payload_t {
+  unsigned long ms;
+  unsigned long counter;
+};
+
 void setup() 
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   InitializeRadio(); 
 }
  
 void loop()
 {  
-  if( MessageReceived() == dataRequested )
-  {
-    SentMessage( GetHumidity() );
+  network.update();
+  
+  if( network.available() )
+  {  
+    RF24NetworkHeader header;
+    uint16_t payloadSize = network.peek(header);
+    char payload[payloadSize];
+    
+    network.read(header,&payload,payloadSize);
+        
+    String msg = String(payload).substring(0,payloadSize);
+    Serial.print("substring>");
+    Serial.println(msg);
+    
+    if( msg == dataRequested )
+    {
+      char buff[16];
+      int hum = GetHumidity();
+      
+      itoa(hum, buff, 10);
+      Serial.print("Hum: "); Serial.println(hum);
+      Serial.print("Buff: "); Serial.println(buff);
+      SendMessage(buff);
+    }
   }
 }
 
 void InitializeRadio()
 {
-  if (!nrf24.init())
-    Serial.println("initialization failed");
-  if (!nrf24.setChannel(1))
-    Serial.println("Channel set failed");
-  if (!nrf24.setRF(RH_NRF24::DataRate2Mbps, RH_NRF24::TransmitPower0dBm))
-    Serial.println("RF set failed"); 
+  SPI.begin();
+  radio.begin();
+  network.begin(90, this_node);
 }
 
 int GetHumidity()
 {
   int sensorValue = analogRead(humidityInPin);
-  int outputValue = map(sensorValue, 500, 1023, 100, 0);
+  int outputValue = map(sensorValue, LOW_LIMIT, HIGH_LIMIT, 100, 0);
 
-  Serial.println("Sensor Value: ");
-  Serial.print(sensorValue);
+  // Serial.print("Sensor Value: "); Serial.println(sensorValue);
 
   return outputValue;
 }
 
-void SentMessage(int humidity)
+void SendMessage(char* payload )
 {
-  String timestring = String(humidity);
-  
-  uint8_t dataArray[timestring.length()+1];
-  timestring.getBytes(dataArray,timestring.length()+1);
-  
-  nrf24.send(dataArray,sizeof(dataArray));
-  nrf24.waitPacketSent();
+//  String message = GNOMO_ID;
+//  message.concat( String(humidity) );
+//  
+//  uint8_t dataArray[message.length()+1];
+//  message.getBytes(dataArray,message.length()+1);
+//  
+//  Serial.print("Sent: ");
+//  Serial.println(message);
 
-  Serial.print("Sent: ");
-  Serial.println(timestring);
+    RF24NetworkHeader header(baseId);
+    bool ok = network.write(header,payload,strlen(payload));
+    
+    if (ok)
+      Serial.println("message sent");
+    else
+      Serial.println("message dalivery failed");
 }
 
-String MessageReceived()
+char MessageReceived()
 {
-  if (nrf24.available())
-  {
-    uint8_t len = sizeof(buf);
-    if(nrf24.recv(buf, &len))
-    {
-      String message = String( (char*)buf );
-      Serial.print("Received: ");
-      Serial.println((char*)buf);
+  while ( network.available() ) 
+  {  
+    RF24NetworkHeader header;
+    payload_t payload;
+    network.read(header,&payload,sizeof(payload));
+    Serial.print("Received packet #");
+    Serial.print(payload.counter);
+    Serial.print(" at ");
+    Serial.println(payload.ms);
 
-      return message;
-    }
-    else
-    {
-      Serial.println("recv failed");
-    }
+    return payload.ms;
   }
-
+  
   return emptyMessage;
 }
