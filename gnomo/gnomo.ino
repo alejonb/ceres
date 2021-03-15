@@ -13,10 +13,8 @@
 #define ANALOG_HIGH 1023
 #define ANALOG_LOW 500
 
-
 RF24 radio(CE_PIN, CSN_PIN);
 RF24Network network(radio);
-
 
 void setup() {
     Serial.begin(115200);
@@ -47,7 +45,6 @@ void loop() {
         itoa(hum, buff, 10);
         sendMessage(buff);
     }
-
 }
 
 void initRadio() {
