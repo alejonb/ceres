@@ -16,29 +16,17 @@
 
 // const char* ssid = "GATOS";
 // const char* password = "venceromorir";
-// const int timeToCollect = 10000;
+
 unsigned long last_millis = millis();
 const uint16_t gnomos[2] = {01, 02};
-// String humidities[] = {};
-// String crops[2] = {"albahaca", "besitos"};
 
 RF24 radio(CE_PIN, CSN_PIN);
 RF24Network network(radio);
 
-
-// unsigned long packets_sent;
-
-// struct payload_t {
-//   unsigned long ms;
-//   unsigned long counter;
-// };
-
-// String payload = "";
-
 void setup() {
     Serial.begin(115200);
     initRadio();
-    // InitializeWiFi();
+    // initWiFi();
 }
 
 void loop() {
@@ -48,8 +36,6 @@ void loop() {
         requestData();
         last_millis = millis();
     }
-
-    // network.update();
 
     if (network.available()) {
         RF24NetworkHeader header;
@@ -62,7 +48,7 @@ void loop() {
         Serial.print("Got: ");
         Serial.println(msg);
 
-        // SendMessage( msg );
+        // sendToCloud( msg );
     }
 }
 
@@ -95,7 +81,7 @@ void initRadio() {
     network.begin(NETWORK_CHANNEL, BASE_ID);
 }
 
-// void InitializeWiFi()
+// void initWiFi()
 // {
 //   WiFi.mode(WIFI_STA);
 //   WiFi.begin(ssid, password);
@@ -107,17 +93,12 @@ void initRadio() {
 //   }
 // }
 
-// void SendMessage(String humidity)
+// void sendToCloud(String humidity)
 // {
 //     String message = "gnomo_0,cultivo=maiz humidity=";
 //     message.concat(humidity);
 
 //     Serial.print("Influx query: "); Serial.println(message);
-//     SendDataToServer(message);
-// }
-
-// void SendDataToServer( String message )
-// {
 //       if (WiFi.status() == WL_CONNECTED)
 //       {
 //         WiFiClient client;
@@ -154,9 +135,4 @@ void initRadio() {
 //           Serial.printf("[HTTP} Unable to connect\n");
 //         }
 //       }
-// }
-
-// bool MessageWasReceived(int gnomoId)
-// {
-//   return false;
 // }
