@@ -38,27 +38,29 @@ void loop() {
         Serial.println(msg);
     }
 
+    // Sending through the RF24 only worked by adding this delay
     delay(10);
+
     if (msg == "DATA_COLLECT") {
-        char buff[16];
-        int hum = map(analogRead(ANALOG_PIN), ANALOG_LOW, ANALOG_HIGH, 100, 0);
-        itoa(hum, buff, 10);
+        String line = lineProtocol();
+        char buff[256];
+        line.toCharArray(buff, sizeof(buff));
         sendMessage(buff);
     }
 }
 
-void initRadio() {
-    SPI.begin();
-    if (!radio.begin()) {
-        Serial.println("Radio hardware not responding!");
-        while (true) {
-            // do nothing
-        }
-    }
-    network.begin(NETWORK_CHANNEL, GNOMO_ID);
+String lineProtocol() {
+    /*
+        This is where the sensors are read and data is arranged:
+        var1=val1,var2=val2,var3=val3
+    */
+    int humidity_raw = analogRead(ANALOG_PIN);
+    int humidity = map(humidity_raw, ANALOG_LOW, ANALOG_HIGH, 100, 0);
+
+    return String("humidity=") + String(humidity);
 }
 
-void sendMessage(const char* payload) {
+void sendMessage(char* payload) {
     Serial.print("--------- ");
     Serial.println(millis());
     Serial.print("Reaching base ");
@@ -73,4 +75,15 @@ void sendMessage(const char* payload) {
         Serial.println("... OK");
     else
         Serial.println("... failed");
+}
+
+void initRadio() {
+    SPI.begin();
+    if (!radio.begin()) {
+        Serial.println("Radio hardware not responding!");
+        while (true) {
+            // do nothing
+        }
+    }
+    network.begin(NETWORK_CHANNEL, GNOMO_ID);
 }
