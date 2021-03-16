@@ -42,14 +42,14 @@ void loop() {
     delay(10);
 
     if (msg == "DATA_COLLECT") {
-        String line = lineProtocol();
+        String fields = getFieldsStr();
         char buff[256];
-        line.toCharArray(buff, sizeof(buff));
+        fields.toCharArray(buff, sizeof(buff));
         sendMessage(buff);
     }
 }
 
-String lineProtocol() {
+String getFieldsStr() {
     /*
         This is where the sensors are read and data is arranged:
         var1=val1,var2=val2,var3=val3
