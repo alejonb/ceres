@@ -1,7 +1,6 @@
 
-// #include <ESP8266WiFi.h>
-// #include <ESP8266HTTPClient.h>
-// #include <WiFiClient.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
 #include <RF24.h>
 #include <RF24Network.h>
 #include <SPI.h>
@@ -14,8 +13,8 @@
 
 #define PERIOD 1000
 
-// const char* ssid = "GATOS";
-// const char* password = "venceromorir";
+const char* ssid = "GATOS";
+const char* password = "venceromorir";
 
 unsigned long last_millis = millis();
 const uint16_t gnomos[2] = {01, 02};
@@ -26,7 +25,7 @@ RF24Network network(radio);
 void setup() {
     Serial.begin(115200);
     initRadio();
-    // initWiFi();
+    initWiFi();
 }
 
 void loop() {
@@ -44,11 +43,11 @@ void loop() {
 
         network.read(header, &payload, payloadSize);
 
-        String msg = String(payload).substring(0, payloadSize);
+        String fields = String(payload).substring(0, payloadSize);
         Serial.print("Got: ");
-        Serial.println(msg);
+        Serial.println(fields);
 
-        // sendToCloud( msg );
+        sendToCloud(fields);
     }
 }
 
@@ -81,58 +80,52 @@ void initRadio() {
     network.begin(NETWORK_CHANNEL, BASE_ID);
 }
 
-// void initWiFi()
-// {
-//   WiFi.mode(WIFI_STA);
-//   WiFi.begin(ssid, password);
-//   Serial.println("\nConnecting to WiFi");
-//   while (WiFi.status() != WL_CONNECTED)
-//   {
-//     Serial.print(".");
-//     delay(1000);
-//   }
-// }
+void initWiFi() {
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+    Serial.println("\nConnecting to WiFi");
+    while (WiFi.status() != WL_CONNECTED) {
+        Serial.print(".");
+        delay(1000);
+    }
+    Serial.println("Connected!");
+}
 
-// void sendToCloud(String humidity)
-// {
-//     String message = "gnomo_0,cultivo=maiz humidity=";
-//     message.concat(humidity);
+void sendToCloud(String fields) {
+    String line = String("gnomo,base_id=123,gnomo_id=321 ") + fields;
 
-//     Serial.print("Influx query: "); Serial.println(message);
-//       if (WiFi.status() == WL_CONNECTED)
-//       {
-//         WiFiClient client;
-//         HTTPClient http;
+    Serial.print("Influx line: ");
+    Serial.println(line);
 
-//         Serial.print("[HTTP] begin...\n");
-//         if (http.begin(client, "http://tucanoar.com:8086/write?db=tucanodb"))
-//         {  // HTTP
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("ERROR: WL_CONNECTED");
+        return;
+    }
 
-//           Serial.print("[HTTP] POST...\n");
-//           // start connection and send HTTP header
+    WiFiClient client;
+    HTTPClient http;
 
-//           Serial.println(message);
-//           int httpCode = http.POST( message );
+    if (!http.begin(client, "http://tucanoar.com:8086/write?db=tucanodb")) {
+        Serial.println("ERROR: No http.begin");
+        return;
+    }
 
-//           // httpCode will be negative on error
-//           if (httpCode > 0) {
-//             // HTTP header has been send and Server response header has been
-//             handled Serial.printf("[HTTP] POST... code: %d\n", httpCode);
+    int httpCode = http.POST(line);
 
-//             // file found at server
-//             if (httpCode == HTTP_CODE_OK || httpCode ==
-//             HTTP_CODE_MOVED_PERMANENTLY) {
-//               String payload = http.getString();
-//               Serial.println(payload);
-//             }
-//           } else {
-//             Serial.printf("[HTTP] POST... failed, error: %s\n",
-//             http.errorToString(httpCode).c_str());
-//           }
+    if (httpCode <= 0) {
+        Serial.printf("ERROR: POST failed: %s\n", http.errorToString(httpCode).c_str());
+        return;
+    }
 
-//           http.end();
-//         } else {
-//           Serial.printf("[HTTP} Unable to connect\n");
-//         }
-//       }
-// }
+    Serial.printf("[HTTP] POST code: %d\n", httpCode);
+
+    if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+        String payload = http.getString();
+        Serial.print("[HTTP] Response ");
+        Serial.print(httpCode);
+        Serial.print(": ");
+        Serial.println(payload);
+    }
+
+    http.end();
+}
